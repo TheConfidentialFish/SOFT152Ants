@@ -24,7 +24,7 @@ namespace SOFT152Steering
         private static int noOfAnts = 300;
 
         // declare a sample agent
-        private AntAgent agent1;
+        
         private SOFT152Vector anotherObject;
 
         //make a group of ants dependant on the number of ants
@@ -65,8 +65,7 @@ namespace SOFT152Steering
             // on which they are displayed
             worldLimits = new Rectangle(0, 0, drawingPanel.Width, drawingPanel.Height);
 
-            // create an agent at a postion 
-            agent1 = new AntAgent(new SOFT152Vector(100, 150), randomGenerator, worldLimits);
+           
 
             for(int i=0; i < noOfAnts; i++)
             {
@@ -75,10 +74,16 @@ namespace SOFT152Steering
 
                 antGroup[i].KnowsFood = false;
                 antGroup[i].KnowsNest = false;
+
+                //set moving values for all the ants in the antGroup
+                antGroup[i].AgentSpeed = 1.0;
+                antGroup[i].WanderLimits = 0.25;
+
+                //keep all the antAgents in the antGroup in the world
+                antGroup[i].ShouldStayInWorldBounds = true;
             }
 
-            //starts the ant agent with no food
-            agent1.HasFood = false;
+            
 
             // create an object at a arbitary position
             someObject = new SOFT152Vector(250, 250);
@@ -125,26 +130,9 @@ namespace SOFT152Steering
             {
                 g.Clear(Color.White);
 
-                // get the 1st agent position
-                agentXPosition = (float)agent1.AgentPosition.X;
-                agentYPosition = (float)agent1.AgentPosition.Y;
+                
 
-                // create a brush
-                solidBrush = new SolidBrush(Color.Red);
-
-                // draw the 1st agent
-                g.FillRectangle(solidBrush, agentXPosition, agentYPosition, antSize, antSize);
-
-
-
-                //draw the food for the 1st agent if they have any
-                if (agent1.HasFood)
-                {
-                    solidBrush = new SolidBrush(Color.Gold);
-                    g.FillRectangle(solidBrush, agentXPosition, agentYPosition, foodSize, foodSize);
-
-                }
-
+                
                 for (int i = 0; i < noOfAnts; i++)
                 {
                     // get the 1st agent position
@@ -213,24 +201,7 @@ namespace SOFT152Steering
             {
                 backgroundGraphics.Clear(Color.White);
 
-                // get the 1st agent position
-                agentXPosition = (float)agent1.AgentPosition.X;
-                agentYPosition = (float)agent1.AgentPosition.Y;
-
-                // create a brush
-                solidBrush = new SolidBrush(Color.Red);
-
-                // draw the 1st agent on the backgroundImage
-                backgroundGraphics.FillRectangle(solidBrush, agentXPosition, agentYPosition, antSize, antSize);
-
-                //draw the food for the 1st agent if they have any
-                if (agent1.HasFood)
-                {
-                    solidBrush = new SolidBrush(Color.Gold);
-                    backgroundGraphics.FillRectangle(solidBrush, agentXPosition, agentYPosition, foodSize, foodSize);
-
-                }
-
+                
                 for (int i = 0; i < noOfAnts; i++)
                 {
                     // get the 1st agent position
@@ -290,41 +261,52 @@ namespace SOFT152Steering
         private void timer_Tick(object sender, EventArgs e)
         {
 
-                       
-        
-            // one each time tick each of the two agents makes one movment
+                     
 
-            // set some values for agent1
-            // before it moves
-            agent1.AgentSpeed = 2.0;
-            agent1.WanderLimits = 0.25;
-            
-            // keep the agent within the world
-            agent1.ShouldStayInWorldBounds = true;
 
-            for(int i = 0; i < noOfAnts; i++)
+            antCarry(5);
+            antDiscover(50);
+            antCommunication(15);
+            antMovementBehaviour();
+      
+            // after making a movement, now draw the agents
+            DrawAgents();
+
+            DrawAgentsDoubleBuffering();
+        }
+
+        /// <summary>
+        /// handles the behaviour for if an ant has food and it can be dropped off, or if it can collect food
+        /// </summary>
+        /// <param name="distance">the distance at which the ant can pick up or deposit food</param>
+        private void antCarry(int distance)
+        {
+            for (int i = 0; i < noOfAnts; i++)
             {
-                //set moving values for all the ants in the antGroup
-                antGroup[i].AgentSpeed = 1.0;
-                antGroup[i].WanderLimits = 0.25;
-
-                //keep all the antAgents in the antGroup in the world
-                antGroup[i].ShouldStayInWorldBounds = true;
-                
                 //Conditional Statement for the ant picking up food at a FoodObject
-                if (antGroup[i].DistanceTo(someObject) < 5)
+                if (antGroup[i].DistanceTo(someObject) < distance)
                 {
                     antGroup[i].GrabFood();
                 }
 
                 //conditional statement for the any depositing food at a Nest Object
-                if (antGroup[i].DistanceTo(anotherObject) < 5)
+                if (antGroup[i].DistanceTo(anotherObject) < distance)
                 {
                     antGroup[i].DepositFood();
                 }
+            }
+        }
 
+        /// <summary>
+        /// Handles the ants discovering the location of a FoodObject or NestObject
+        /// </summary>
+        /// <param name="distance">the distance at which ants discover food</param>
+        private void antDiscover (int distance)
+        {
+            for (int i = 0; i < noOfAnts; i++)
+            {
                 //conditional statement for discovering the location of a nest
-                if (antGroup[i].DistanceTo(anotherObject) < 50)
+                if (antGroup[i].DistanceTo(anotherObject) < distance)
                 {
                     antGroup[i].KnowsNest = true;
 
@@ -332,36 +314,22 @@ namespace SOFT152Steering
                 }
 
                 //conditional statement for discovering the location of a FoodObject
-                if (antGroup[i].DistanceTo(someObject) < 50)
+                if (antGroup[i].DistanceTo(someObject) < distance)
                 {
                     antGroup[i].KnowsFood = true;
 
                     antGroup[i].NearestFood = someObject;
                 }
+            }
+        }
 
-                for (int j = 0; j < noOfAnts; j++)
-                {
-                    if ((antGroup[i].DistanceTo(antGroup[j].AgentPosition) < 15) && antGroup[j].KnowsFood)
-                    {
-                        antGroup[i].NearestFood = antGroup[j].NearestFood;
-
-                        antGroup[i].KnowsFood = true;
-                    }
-                }
-
-                for (int j = 0; j < noOfAnts; j++)
-                {
-                    if ((antGroup[i].DistanceTo(antGroup[j].AgentPosition) < 15) && antGroup[j].KnowsNest)
-                    {
-                        antGroup[i].NearestNest = antGroup[j].NearestNest;
-
-                        antGroup[i].KnowsNest = true;
-                    }
-                }
-
-
-
-
+        /// <summary>
+        /// Handles the decision making process of the end depending on what it should do next
+        /// </summary>
+        private void antMovementBehaviour()
+        {
+            for (int i = 0; i < noOfAnts; i++)
+            {
                 //Conditional Block that determines where the ant moves to next
                 if (antGroup[i].HasFood && antGroup[i].KnowsNest)
                 {
@@ -371,7 +339,7 @@ namespace SOFT152Steering
                 {
                     antGroup[i].Wander();
                 }
-                else if(antGroup[i].KnowsFood)
+                else if (antGroup[i].KnowsFood)
                 {
                     antGroup[i].Approach(antGroup[i].NearestFood);
                 }
@@ -380,49 +348,38 @@ namespace SOFT152Steering
                     antGroup[i].Wander();
                 }
             }
-
-            //Conditional Statement for the ant picking up food at a FoodObject
-            if (agent1.DistanceTo(someObject) < 5)
-            {
-                agent1.GrabFood();
-            }
-
-            //conditional statement for the any depositing food at a Nest Object
-            if (agent1.DistanceTo(anotherObject) < 5)
-            {
-                agent1.DepositFood();
-            }
-
-            //conditional statement for discovering the location of a nest
-            if(agent1.DistanceTo(anotherObject) < 50)
-            {
-                agent1.KnowsNest = true;
-
-                agent1.NearestNest = anotherObject;
-            }
-
-            //Conditional Block that determines where the ant moves to next
-            if (agent1.HasFood&&agent1.KnowsNest)
-            {
-                agent1.Approach(agent1.NearestNest);
-            }
-            else if(agent1.HasFood)
-            {
-                agent1.Wander();
-            }
-            else
-            {
-                agent1.Approach(someObject);
-            }
-
-
-            
-            
-      
-            // after making a movement, now draw the agents
-            DrawAgents();
-
-            DrawAgentsDoubleBuffering();
         }
+        /// <summary>
+        /// Queries all the ants within a certain distance of another ant to see if they know either the location of a FoodObject or a NestObject 
+        /// </summary>
+        /// <param name="distance">the distance the ants have to be at in order to communicate</param>
+        private void antCommunication(int distance)
+        {
+            
+            for (int i = 0; i < noOfAnts; i++)
+            {
+                
+                for (int j = 0; j < noOfAnts; j++)
+                {
+                    if ((antGroup[i].DistanceTo(antGroup[j].AgentPosition) < distance) && antGroup[j].KnowsFood)
+                    {
+                        antGroup[i].NearestFood = antGroup[j].NearestFood;
+
+                        antGroup[i].KnowsFood = true;
+                    }
+                }
+
+                for (int j = 0; j < noOfAnts; j++)
+                {
+                    if ((antGroup[i].DistanceTo(antGroup[j].AgentPosition) < distance) && antGroup[j].KnowsNest)
+                    {
+                        antGroup[i].NearestNest = antGroup[j].NearestNest;
+
+                        antGroup[i].KnowsNest = true;
+                    }
+                }
+            }
+        }
+
     }
 }
